@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime, timedelta
 from scipy.signal import medfilt
+import io
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="SleepPhase-AI | Automated Scoring", layout="wide", page_icon="🌙")
@@ -50,6 +51,14 @@ def extract_features_from_edf(file_path):
     X = np.hstack([np.array(eeg_feat), eog_feat, emg_feat])
     return X, raw.info['meas_date']
 
+# --- SIDEBAR: INFO Y CRÉDITOS DISCRETOS ---
+with st.sidebar:
+    st.info("⚠️ This model is calibrated for the Sleep-EDF (Kemp et al.) database standards. Model accuracy (92.0%) is based on global database validation.")
+    st.markdown("---")
+    # Créditos discretos en formato caption (texto pequeño y gris)
+    st.caption("Developed by Gabriel Asís-Sagrado, Èric Domingo Roca & Michaela Freire Griffith")
+    st.caption("Master's is Cognitive Systems and Interactive Media (UPF) ― 2026")
+
 # --- INTERFAZ ---
 st.title("🌙 SleepPhase AI: Automated Scoring System")
 mlp, scaler = load_model_and_scaler()
@@ -64,7 +73,6 @@ with tab1:
     col_main, col_side = st.columns([3, 1])
     
     with col_side:
-        st.info("⚠️ This model is calibrated for the Sleep-EDF (Kemp et al.) database standards. Model accuracy (92.0%) is based on global database validation.")
         if os.path.exists(FOLDER_PATH):
             edf_files = [f for f in os.listdir(FOLDER_PATH) if f.lower().endswith('.edf') and 'psg' in f.lower()]
             selected_file = st.selectbox("Select Subject PSG File", edf_files)
@@ -86,7 +94,6 @@ with tab1:
         with st.spinner(f"Analyzing {selected_file}..."):
             X_raw, start_dt = extract_features_from_edf(os.path.join(FOLDER_PATH, selected_file))
             X_scaled = scaler.transform(X_raw)
-            # Eric usaba un filtro de 5 para los reales
             y_pred = medfilt(mlp.predict(X_scaled), kernel_size=5).astype(int)
 
             st.markdown("---")
@@ -115,13 +122,22 @@ with tab1:
             ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
             plt.grid(axis='x', linestyle=':', alpha=0.3)
             st.pyplot(fig)
+            
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png", bbox_inches='tight', dpi=300)
+            st.download_button(
+                label="💾 Download Real Hypnogram",
+                data=buf.getvalue(),
+                file_name=f"Hypnogram_{selected_file}.png",
+                mime="image/png"
+            )
 
 # ==========================================
-# PESTAÑA 2: SIMULADOR (Lógica exacta de Eric adaptada a Streamlit)
+# PESTAÑA 2: SIMULADOR
 # ==========================================
 with tab2:
     st.subheader("🧪 Synthetic Patient Simulator")
-    st.write("Generates a predictive hypnogram based on Eric's clinical sleep architecture rules.")
+    st.write("Generates a predictive hypnogram based on clinical sleep architecture rules.")
     
     col1, col2 = st.columns(2)
     name_in = col1.text_input("Name:", "Patient_001")
@@ -140,23 +156,20 @@ with tab2:
         total_epochs = int(hours_in * 120)
         y_syn_base = []
 
-        # LÓGICA DE ERIC: Reglas clínicas basadas en la base de datos
         for i in range(total_epochs):
             progress = i / total_epochs
             cycle_pos = (i % 180) / 180
             
-            if progress < 0.05: stage = 0 # Awake
+            if progress < 0.05: stage = 0 
             elif progress < 0.4 and cycle_pos < 0.4:
-                stage = 3 if age_in < 60 else 2 # Deep or N2
-            elif progress > 0.6 and cycle_pos > 0.7: stage = 4 # REM
-            else: stage = 2 # N2
+                stage = 3 if age_in < 60 else 2 
+            elif progress > 0.6 and cycle_pos > 0.7: stage = 4 
+            else: stage = 2 
             
             y_syn_base.append(stage)
 
-        # LÓGICA DE ERIC: Suavizado con filtro de 7
         y_syn_smooth = medfilt(y_syn_base, kernel_size=7).astype(int)
 
-        # LÓGICA DE ERIC: Plotting
         st.markdown("---")
         fig2, ax2 = plt.subplots(figsize=(15, 5), facecolor='#F5F5F7')
         ax2.set_facecolor('white')
@@ -180,3 +193,13 @@ with tab2:
         for spine in ax2.spines.values(): spine.set_visible(False)
         plt.title(f"HYPOTHETICAL SUBJECT: {name_in} (Age: {age_in}) - Multimodal Analysis", fontsize=16, fontweight='bold')
         st.pyplot(fig2)
+        
+        buf2 = io.BytesIO()
+        fig2.savefig(buf2, format="png", bbox_inches='tight', dpi=300)
+        safe_name = name_in.replace(" ", "_")
+        st.download_button(
+            label="💾 Download Synthetic Hypnogram",
+            data=buf2.getvalue(),
+            file_name=f"Hypnogram_Sim_{safe_name}.png",
+            mime="image/png"
+        )
