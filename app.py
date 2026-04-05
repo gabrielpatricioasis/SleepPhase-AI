@@ -57,7 +57,7 @@ with st.sidebar:
     st.markdown("---")
     # Créditos discretos en formato caption (texto pequeño y gris)
     st.caption("Developed by Gabriel Asís-Sagrado, Èric Domingo Roca & Michaela Freire Griffith")
-    st.caption("Master's is Cognitive Systems and Interactive Media (UPF) ― 2026")
+    st.caption("Master's in Cognitive Systems and Interactive Media (UPF) ― 2026")
 
 # --- INTERFAZ ---
 st.title("🌙 SleepPhase-AI: Automated Scoring System")
@@ -174,7 +174,7 @@ with tab2:
         fig2, ax2 = plt.subplots(figsize=(15, 5), facecolor='#F5F5F7')
         ax2.set_facecolor('white')
         
-        config_sim = {4: (0.0, 0.2, '#FF69B4', 'REM'), 3: (0.2, 0.2, '#6C5CE7', 'N3'),
+        config_sim = {4: (0.0, 0.2, '#FF69B4', 'REM'), 3: (0.2, 0.2, '#6C5CE7', 'N3/N4'),
                       2: (0.4, 0.2, '#A29BFE', 'N2'), 1: (0.6, 0.2, '#D1D1FF', 'N1'), 0: (0.8, 0.2, '#FFB347', 'Awake')}
 
         for st_id, (y_min, h, col, n) in config_sim.items():
@@ -188,7 +188,7 @@ with tab2:
 
         ax2.set_ylim(0, 1)
         ax2.set_yticks([0.1, 0.3, 0.5, 0.7, 0.9])
-        ax2.set_yticklabels(['REM', 'N3', 'N2', 'N1', 'Awake'], fontweight='bold')
+        ax2.set_yticklabels(['REM', 'N3/N4', 'N2', 'N1', 'Awake'], fontweight='bold')
         ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
         for spine in ax2.spines.values(): spine.set_visible(False)
         plt.title(f"HYPOTHETICAL SUBJECT: {name_in} (Age: {age_in}) - Multimodal Analysis", fontsize=16, fontweight='bold')
