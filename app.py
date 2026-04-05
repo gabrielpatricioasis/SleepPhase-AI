@@ -11,7 +11,7 @@ from scipy.signal import medfilt
 import io
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="SleepPhase-AI | Automated Scoring", layout="wide", page_icon="🌙")
+st.set_page_config(page_title="SleepPhase-AI", layout="wide", page_icon="🌙")
 
 # --- RUTAS ---
 FOLDER_PATH = 'subjects'
@@ -60,7 +60,7 @@ with st.sidebar:
     st.caption("Master's is Cognitive Systems and Interactive Media (UPF) ― 2026")
 
 # --- INTERFAZ ---
-st.title("🌙 SleepPhase AI: Automated Scoring System")
+st.title("🌙 SleepPhase-AI: Automated Scoring System")
 mlp, scaler = load_model_and_scaler()
 
 # --- TABS ---
