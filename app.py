@@ -10,10 +10,9 @@ from datetime import datetime, timedelta
 from scipy.signal import medfilt
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="SleepPhase AI | Professional Scoring", layout="wide", page_icon="🌙")
+st.set_page_config(page_title="SleepPhase-AI | Automated Scoring", layout="wide", page_icon="🌙")
 
-# --- RUTAS CORREGIDAS PARA LA NUBE ---
-# ¡ESTA ES LA RUTA RELATIVA QUE FUNCIONA EN GITHUB Y STREAMLIT CLOUD!
+# --- RUTAS ---
 FOLDER_PATH = 'subjects'
 
 @st.cache_resource
@@ -55,16 +54,7 @@ def extract_features_from_edf(file_path):
 st.title("🌙 SleepPhase AI: Automated Scoring System")
 mlp, scaler = load_model_and_scaler()
 
-# Configuración de colores del Hipnograma
-config_colors = {
-    4: (0.0, 0.2, '#FF69B4', 'REM'),
-    3: (0.2, 0.2, '#6C5CE7', 'N3/4'),
-    2: (0.4, 0.2, '#A29BFE', 'N2'),
-    1: (0.6, 0.2, '#D1D1FF', 'N1'),
-    0: (0.8, 0.2, '#FFB347', 'Wake')
-}
-
-# --- TABS (PESTAÑAS) ---
+# --- TABS ---
 tab1, tab2 = st.tabs(["📂 Real Patient Analysis", "🧪 Hypnogram Simulator"])
 
 # ==========================================
@@ -74,7 +64,7 @@ with tab1:
     col_main, col_side = st.columns([3, 1])
     
     with col_side:
-        st.info("⚠️ Model accuracy (92.0%) is based on global database validation.")
+        st.info("⚠️ This model is calibrated for the Sleep-EDF (Kemp et al.) database standards. Model accuracy (92.0%) is based on global database validation.")
         if os.path.exists(FOLDER_PATH):
             edf_files = [f for f in os.listdir(FOLDER_PATH) if f.lower().endswith('.edf') and 'psg' in f.lower()]
             selected_file = st.selectbox("Select Subject PSG File", edf_files)
@@ -96,6 +86,7 @@ with tab1:
         with st.spinner(f"Analyzing {selected_file}..."):
             X_raw, start_dt = extract_features_from_edf(os.path.join(FOLDER_PATH, selected_file))
             X_scaled = scaler.transform(X_raw)
+            # Eric usaba un filtro de 5 para los reales
             y_pred = medfilt(mlp.predict(X_scaled), kernel_size=5).astype(int)
 
             st.markdown("---")
@@ -106,7 +97,10 @@ with tab1:
 
             st.subheader("📊 Generated Hypnogram (Real Data)")
             fig, ax = plt.subplots(figsize=(15, 5), facecolor='white')
-            for stage, (y_min, height, color, label) in config_colors.items():
+            config_real = {4: (0.0, 0.2, '#FF69B4', 'REM'), 3: (0.2, 0.2, '#6C5CE7', 'N3/4'),
+                           2: (0.4, 0.2, '#A29BFE', 'N2'), 1: (0.6, 0.2, '#D1D1FF', 'N1'), 0: (0.8, 0.2, '#FFB347', 'Wake')}
+            
+            for stage, (y_min, height, color, label) in config_real.items():
                 is_stage = (y_pred == stage).astype(int)
                 diff = np.diff(np.concatenate([[0], is_stage, [0]]))
                 starts, ends = np.where(diff == 1)[0], np.where(diff == -1)[0]
@@ -123,11 +117,11 @@ with tab1:
             st.pyplot(fig)
 
 # ==========================================
-# PESTAÑA 2: SIMULADOR (Integración de la captura)
+# PESTAÑA 2: SIMULADOR (Lógica exacta de Eric adaptada a Streamlit)
 # ==========================================
 with tab2:
     st.subheader("🧪 Synthetic Patient Simulator")
-    st.write("Generate a predictive hypnogram based on age and clinical sleep architecture rules.")
+    st.write("Generates a predictive hypnogram based on Eric's clinical sleep architecture rules.")
     
     col1, col2 = st.columns(2)
     name_in = col1.text_input("Name:", "Patient_001")
@@ -135,7 +129,7 @@ with tab2:
     hours_in = col2.slider("Sleep Hrs:", 4.0, 12.0, 8.0, 0.5)
     bedtime_in = col2.text_input("Bedtime (HH:MM):", "23:00")
     
-    if st.button("🧬 Run Simulation", type="primary"):
+    if st.button("🚀 Run Simulation", type="primary"):
         try:
             start_dt = datetime.strptime(bedtime_in, "%H:%M")
             start_dt = start_dt.replace(year=datetime.today().year, month=datetime.today().month, day=datetime.today().day)
@@ -143,38 +137,46 @@ with tab2:
             st.error("Error: Invalid Time Format. Use HH:MM")
             st.stop()
 
-        total_epochs = int(hours_in * 120) # 120 epochs of 30s per hour
-        y_syn = []
+        total_epochs = int(hours_in * 120)
+        y_syn_base = []
 
-        # Lógica clínica de la simulación
+        # LÓGICA DE ERIC: Reglas clínicas basadas en la base de datos
         for i in range(total_epochs):
             progress = i / total_epochs
             cycle_pos = (i % 180) / 180
             
-            if progress < 0.05: stage = 0
-            elif progress < 0.4 and cycle_pos < 0.4: stage = 3 if age_in < 60 else 2
-            elif progress > 0.6 and cycle_pos > 0.7: stage = 4
-            else: stage = 2
-            y_syn.append(stage)
+            if progress < 0.05: stage = 0 # Awake
+            elif progress < 0.4 and cycle_pos < 0.4:
+                stage = 3 if age_in < 60 else 2 # Deep or N2
+            elif progress > 0.6 and cycle_pos > 0.7: stage = 4 # REM
+            else: stage = 2 # N2
             
-        y_syn = np.array(y_syn)
+            y_syn_base.append(stage)
 
+        # LÓGICA DE ERIC: Suavizado con filtro de 7
+        y_syn_smooth = medfilt(y_syn_base, kernel_size=7).astype(int)
+
+        # LÓGICA DE ERIC: Plotting
         st.markdown("---")
-        st.subheader(f"📊 Predictive Hypnogram: {name_in} (Age: {age_in})")
-        fig2, ax2 = plt.subplots(figsize=(15, 5), facecolor='white')
+        fig2, ax2 = plt.subplots(figsize=(15, 5), facecolor='#F5F5F7')
+        ax2.set_facecolor('white')
         
-        for stage, (y_min, height, color, label) in config_colors.items():
-            is_stage = (y_syn == stage).astype(int)
-            diff = np.diff(np.concatenate([[0], is_stage, [0]]))
+        config_sim = {4: (0.0, 0.2, '#FF69B4', 'REM'), 3: (0.2, 0.2, '#6C5CE7', 'N3'),
+                      2: (0.4, 0.2, '#A29BFE', 'N2'), 1: (0.6, 0.2, '#D1D1FF', 'N1'), 0: (0.8, 0.2, '#FFB347', 'Awake')}
+
+        for st_id, (y_min, h, col, n) in config_sim.items():
+            is_st = (y_syn_smooth == st_id).astype(int)
+            diff = np.diff(np.concatenate([[0], is_st, [0]]))
             starts, ends = np.where(diff == 1)[0], np.where(diff == -1)[0]
             for s, e in zip(starts, ends):
                 dt_s = start_dt + timedelta(seconds=int(s*30))
                 dt_e = start_dt + timedelta(seconds=int(e*30))
-                ax2.broken_barh([(mdates.date2num(dt_s), mdates.date2num(dt_e) - mdates.date2num(dt_s))], (y_min, height), facecolors=color, edgecolors='none')
+                ax2.broken_barh([(mdates.date2num(dt_s), mdates.date2num(dt_e)-mdates.date2num(dt_s))], (y_min, h), facecolors=col, edgecolors='none')
 
         ax2.set_ylim(0, 1)
         ax2.set_yticks([0.1, 0.3, 0.5, 0.7, 0.9])
-        ax2.set_yticklabels(['REM', 'N3/4', 'N2', 'N1', 'Wake'], fontweight='bold')
+        ax2.set_yticklabels(['REM', 'N3', 'N2', 'N1', 'Awake'], fontweight='bold')
         ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-        plt.grid(axis='x', linestyle=':', alpha=0.3)
+        for spine in ax2.spines.values(): spine.set_visible(False)
+        plt.title(f"HYPOTHETICAL SUBJECT: {name_in} (Age: {age_in}) - Multimodal Analysis", fontsize=16, fontweight='bold')
         st.pyplot(fig2)
