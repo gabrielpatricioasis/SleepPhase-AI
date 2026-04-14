@@ -10,10 +10,10 @@ from datetime import datetime, timedelta
 from scipy.signal import medfilt
 import io
 
-# --- CONFIGURACIÓN DE PÁGINA ---
+# --- CONFIGURATION ---
 st.set_page_config(page_title="SleepPhase-AI", layout="wide", page_icon="🌙")
 
-# --- RUTAS ---
+# --- PATHS ---
 FOLDER_PATH = 'subjects'
 
 @st.cache_resource
@@ -51,7 +51,7 @@ def extract_features_from_edf(file_path):
     X = np.hstack([np.array(eeg_feat), eog_feat, emg_feat])
     return X, raw.info['meas_date']
 
-# --- SIDEBAR: INFO Y CRÉDITOS DISCRETOS ---
+# --- SIDEBAR: INFO & CREDITS ---
 with st.sidebar:
     st.info("⚠️ This model is calibrated for the Sleep-EDF (Kemp et al.) database standards. Model accuracy (92.0%) is based on global database validation.")
     st.markdown("---")
@@ -59,7 +59,7 @@ with st.sidebar:
     st.caption("Developed by Gabriel Asís-Sagrado, Èric Domingo Roca & Michaela Freire Griffith")
     st.caption("Master's in Cognitive Systems and Interactive Media (UPF) ― 2026")
 
-# --- INTERFAZ ---
+# --- INTERFACE ---
 st.title("🌙 SleepPhase-AI: Automated Scoring System")
 mlp, scaler = load_model_and_scaler()
 
@@ -67,7 +67,7 @@ mlp, scaler = load_model_and_scaler()
 tab1, tab2 = st.tabs(["📂 Real Patient Analysis", "🧪 Hypnogram Simulator"])
 
 # ==========================================
-# PESTAÑA 1: ANÁLISIS REAL
+# TAB 1: REAL ANALYSIS
 # ==========================================
 with tab1:
     col_main, col_side = st.columns([3, 1])
@@ -133,7 +133,7 @@ with tab1:
             )
 
 # ==========================================
-# PESTAÑA 2: SIMULADOR
+# TAB 2: SIMULATOR
 # ==========================================
 with tab2:
     st.subheader("🧪 Synthetic Patient Simulator")
